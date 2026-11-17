@@ -2,162 +2,142 @@
 
 ## Project Overview
 
-This project uses machine learning to predict nightly Airbnb listing prices in New York City. Using the NYC Airbnb 2019 dataset, I trained and evaluated multiple regression models through AutoGluon and compared their performance against a traditional Linear Regression baseline.
+This project uses machine learning to predict nightly Airbnb prices in New York City using the 2019 NYC Airbnb dataset. I trained AutoGluon regression models and compared their performance with a traditional Linear Regression baseline.
 
-In addition to predicting prices, the project explores which property characteristics have the greatest influence on pricing, how prices vary across NYC boroughs and room types, and whether advertised amenities are associated with higher nightly rates.
-
-## Dataset
-
-**Source:** [New York City Airbnb Open Data — Kaggle](https://www.kaggle.com/datasets/dgomonov/new-york-city-airbnb-open-data)
-
-The original dataset contains 48,895 listings, with information including:
-
-- Property location (borough, neighborhood, latitude, longitude)
-- Room type (entire home, private room, shared room)
-- Nightly price and minimum stay requirements
-- Number of reviews and review frequency
-- Availability throughout the year
-- Listing names and host information
-
-Data preprocessing included handling missing values, filtering unrealistic or unsuitable observations, scaling numerical features, and preparing categorical variables for modeling.
-
-The cleaned dataset was divided into 80% training and 20% testing data using a fixed random seed.
-
-## Technologies Used
-
-- **Python:** Pandas, NumPy, Scikit-learn
-- **Machine Learning:** AutoGluon, Linear Regression, LightGBM, CatBoost, XGBoost, Random Forest, Extra Trees, PyTorch, FastAI
-- **Visualization:** Matplotlib, Seaborn
-- **Development:** Jupyter Notebook, VS Code, Conda
-
-## Methodology
-
-### 1. Data Preprocessing
-
-The dataset was cleaned to address missing values and remove listings outside the selected price and availability ranges.
-
-Numerical variables were scaled, while categorical variables were handled through AutoGluon's automatic preprocessing or one-hot encoding for the Linear Regression baseline.
-
-An 80/20 training and testing split was used to evaluate model performance on unseen listings.
-
-### 2. AutoGluon Model Training
-
-AutoGluon was used to train multiple regression algorithms and construct weighted ensembles.
-
-Model performance was evaluated using:
-
-- **Mean Absolute Error (MAE):** Average absolute difference between predicted and actual prices.
-- **Root Mean Squared Error (RMSE):** Measures prediction error while penalizing larger mistakes.
-- **R² Score:** Measures how much variation in nightly prices is explained by the model.
-
-### 3. Controlled Model Comparison
-
-A Linear Regression baseline was developed to compare traditional regression against AutoGluon's automated machine learning approach.
-
-To make the comparison more consistent, a second AutoGluon model was trained using the same original input features as Linear Regression, excluding listing names and identifier-related columns.
-
-All three models were evaluated on the same held-out test observations.
+I also examined which features were most useful for predicting prices, how prices varied by borough and room type, and whether amenities advertised in listing names were associated with higher nightly rates.
 
 ## Model Performance
 
 | Model | MAE | RMSE | R² |
 |---|---:|---:|---:|
-| Original AutoGluon Ensemble | **$42.70** | **$84.29** | **0.55** |
-| Controlled AutoGluon Ensemble | $46.28 | $89.43 | 0.49 |
+| AutoGluon (with listing names) | **$42.70** | **$84.29** | **0.55** |
+| AutoGluon (controlled comparison) | $46.28 | $89.43 | 0.49 |
 | Linear Regression | $57.60 | $99.74 | 0.36 |
 
-**Key result:** The controlled AutoGluon ensemble reduced MAE by approximately **19.7%** compared with Linear Regression when using the same input features.
+Using the same input features, AutoGluon reduced mean absolute error (MAE) by approximately **19.7%** compared with Linear Regression. Including listing names reduced AutoGluon's MAE by a further 7.7%.
 
-The original AutoGluon model achieved the lowest prediction error, suggesting that additional listing information, including property names, provides useful predictive signals.
+![Actual vs. predicted nightly prices](figures/actual_vs_predicted.png)
+
+## Dataset and Preprocessing
+
+**Source:** [New York City Airbnb Open Data — Kaggle](https://www.kaggle.com/datasets/dgomonov/new-york-city-airbnb-open-data)
+
+| Dataset | Number of Listings |
+|---|---:|
+| Original dataset | 48,895 |
+| After preprocessing | 19,630 |
+| Training set | 15,704 |
+| Testing set | 3,926 |
+
+The dataset includes property location, room type, nightly price, minimum stay requirements, reviews, availability, and listing names.
+
+Preprocessing steps:
+
+- Filled missing listing names with `No Name`.
+- Removed identifier columns, host names, and last review dates.
+- Removed listings with missing reviews-per-month values.
+- Retained listings priced between $15 and $1,000 per night with at least 52 days of annual availability.
+- Split the data into 80% training and 20% testing sets using a random seed of 42.
+- Scaled numerical features using MinMaxScaler, fitted on the training data, and used one-hot encoding for categorical features in Linear Regression.
+
+## Methodology
+
+AutoGluon was used to train multiple regression algorithms, including gradient-boosted trees, Random Forest, Extra Trees, and neural networks. The models were combined into weighted ensembles.
+
+To separate the effect of additional listing information from the modeling approach, I evaluated three configurations:
+
+1. **Original AutoGluon:** Used the prepared features, including listing names.
+2. **Controlled AutoGluon:** Excluded listing names to match the input features available to Linear Regression.
+3. **Linear Regression:** Served as the traditional regression baseline.
+
+All three configurations were evaluated on the same held-out test observations using MAE, RMSE, and R².
+
+### Performance by Room Type
+
+| Room Type | Test Listings | Average Nightly Price | MAE | R² |
+|---|---:|---:|---:|---:|
+| Entire home/apartment | 1,948 | $206.45 | $61.87 | 0.40 |
+| Private room | 1,878 | $86.52 | $24.12 | 0.42 |
+| Shared room | 100 | $53.96 | $18.04 | 0.25 |
+
+The original AutoGluon ensemble produced the largest absolute errors for entire homes and apartments. Shared rooms had the largest MAE relative to their average price, despite having the lowest absolute MAE.
 
 ## Feature Importance
 
-Permutation feature importance was used to identify which listing characteristics contributed most to prediction accuracy.
+Permutation feature importance was used to measure the increase in prediction error when individual features were shuffled.
 
-Key findings included:
+![AutoGluon and Linear Regression feature importance](figures/feature_importance_comparison.png)
 
-- **Room type** was the most important feature for both AutoGluon and Linear Regression.
-- **Location** was highly influential, particularly neighborhood categories and geographic coordinates.
-- **Minimum nights** and other numerical features contributed more strongly to AutoGluon's predictive performance.
-- **Listing names** provided additional useful information for the original AutoGluon model.
-
-These findings suggest that Airbnb pricing depends on a combination of property characteristics, geographic location, and relationships between features that may not be fully captured by a simple linear model.
+Room type was the most important feature for both models. Location was also influential, while numerical features such as minimum nights contributed more strongly to AutoGluon's predictions. Listing names provided useful predictive information in the original AutoGluon model.
 
 ## Exploratory Data Analysis
 
-### Geographic Pricing Differences
+### Pricing by Borough
 
-Nightly prices varied across NYC boroughs. Manhattan generally had the highest prices, while listings in the Bronx, Queens, and Staten Island tended to be less expensive.
+Manhattan had the highest average nightly price at approximately $192, followed by Brooklyn at $126. The difference between mean and median prices was particularly noticeable in Manhattan, suggesting that expensive listings pulled the average upward.
 
-### Room Type Pricing
+![Nightly price distribution by borough](figures/borough_boxplot.png)
 
-Entire homes and apartments generally commanded higher nightly rates than private or shared rooms.
+### Pricing by Room Type
 
-The model also produced larger absolute prediction errors for entire homes, partly reflecting their higher prices.
+Entire homes and apartments generally had higher nightly prices than private and shared rooms. The price distributions help explain why room type was such an important feature in both models.
+
+![Nightly price distribution by room type](figures/room_type_boxplot.png)
 
 ### Advertised Amenities
 
-Because the dataset does not provide a dedicated amenities column, listing names were searched for keywords associated with selected property features.
+Since the dataset does not include a dedicated amenities column, I used keyword matching on listing names to identify advertised property features and compare median prices between listings with and without each keyword.
 
-Several advertised features were associated with higher median nightly prices:
+![Median price difference by advertised feature](figures/amenity_price_difference.png)
 
-| Advertised Feature | Median Price Difference |
-|---|---:|
-| Pool | +$116 |
-| Rooftop | +$97 |
-| Laundry | +$91 |
-| Hot Tub | +$66 |
-| Garden | +$35 |
-| Park | +$25 |
+| Advertised Feature | Matching Listings | Median Price Difference |
+|---|---:|---:|
+| Pool | 37 | +$116 |
+| Rooftop | 149 | +$97 |
+| Laundry | 131 | +$91 |
+| Hot tub | 13 | +$66 |
+| View | 57 | +$40 |
+| Garden | 518 | +$35 |
+| Park | 1,160 | +$25 |
+| Parking | 116 | -$2 |
+| Pet friendly | 5 | -$10 |
 
-These results represent associations rather than causal effects. Keyword mentions do not guarantee the presence of an amenity, and certain categories contained relatively few listings.
+Listings mentioning pools, rooftops, and laundry facilities were associated with higher median nightly prices. However, some categories had very small sample sizes, and these differences may also reflect property type, location, and other characteristics. The keywords do not establish that the amenities are present or cause higher prices.
+
+Additional visualizations are available in the [figures folder](figures/).
+
+## Technologies Used
+
+- Python, Pandas, NumPy
+- AutoGluon, scikit-learn
+- Matplotlib, Seaborn
+- Jupyter Notebook, VS Code, Conda
 
 ## Running the Project
 
-### 1. Clone the Repository
+1. Clone the repository and open its root directory.
+2. Create and activate the included Conda environment:
 
-```bash
-git clone https://github.com/gabebekele/airbnb_Predictor
-cd airbnb_Predictor
-```
+   `conda env create -f environment.yml`
 
-### 2. Install Dependencies
+   `conda activate airbnb-prediction`
 
-If using the included Conda environment:
+   Alternatively, install the dependencies with `python -m pip install -r requirements.txt` in a compatible Python environment (the Conda configuration specifies Python 3.11).
+3. Ensure `AB_NYC_2019.csv` is available in `data/`. The dataset can be downloaded from the Kaggle link above.
+4. Open [code.ipynb](code.ipynb) in Jupyter Notebook or VS Code and run the cells in order.
 
-```bash
-conda env create -f environment.yml
-conda activate airbnb-prediction
-```
-
-You could also install dependencies using:
-
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Download the Dataset
-
-Download `AB_NYC_2019.csv` from the Kaggle dataset linked above and place it in the location expected by the notebook (inside the data folder).
-
-### 4. Run the Notebook
-
-Open `code.ipynb` in Jupyter Notebook or VS Code and run all cells in order.
-
-AutoGluon will train and save its models locally in the `AutogluonModels/` directory.
-
-**Note:** Model training can be computationally intensive. Results may vary slightly across runs because of randomness in training and differences between software environments. The metrics reported above reflect the saved experiment.
+AutoGluon saves trained models locally in `AutogluonModels/`. Training may be computationally intensive, and results may vary with software versions and training randomness. The results reported here are from the original saved experiment.
 
 ## Limitations
 
-- The dataset represents Airbnb listings from 2019 and may not reflect current NYC rental market conditions.
-- Some records were excluded during preprocessing, which may affect how representative the final dataset is.
-- Advertised amenities were inferred from listing titles rather than verified property details.
-- Several model configurations were evaluated using the same test data, creating some risk of optimistic model selection.
-- Although the controlled comparison used matching original input features, AutoGluon and Linear Regression used different preprocessing and modeling approaches.
+- The dataset is from 2019 and may not reflect current rental market conditions.
+- Preprocessing excluded approximately 60% of the original listings, which limits how well the results generalize to all NYC Airbnb listings.
+- The dataset lacks verified amenities, property size, and number of bedrooms.
+- A random train/test split does not establish how accurately the models predict future prices. Evaluating multiple configurations on the same test set may also lead to optimistic model selection.
+- The controlled comparison uses matching input features but different preprocessing and modeling approaches.
 
 ## Conclusion
 
-This project demonstrates how automated machine learning can improve price prediction compared with traditional Linear Regression. AutoGluon's weighted ensemble achieved stronger predictive performance, while the controlled experiment showed that its advantage was not solely due to access to additional listing features.The analysis also highlighted the importance of room type, location, and property information in determining NYC Airbnb nightly prices.
+AutoGluon outperformed Linear Regression in predicting nightly Airbnb prices, even when both models used the same input features. The analysis also identified room type and location as important predictors and explored how advertised property features were associated with nightly rates.
 
-Potential future improvements include incorporating verified property amenities, exploring additional feature engineering techniques, and evaluating model performance on newer Airbnb datasets.
+Future improvements could include evaluating newer data, incorporating verified property characteristics, and testing model performance on a separate future or independent dataset.

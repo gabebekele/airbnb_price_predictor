@@ -3,6 +3,6 @@ numpy
 matplotlib
 seaborn
 scikit-learn
-autogluon.tabular
+autogluon.tabular[lightgbm,catboost,xgboost,fastai]==1.6.3
 jupyterlab
 ipykernel
